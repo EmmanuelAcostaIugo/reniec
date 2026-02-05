@@ -1,0 +1,9 @@
+NVL(TRIM(NVL(DECODE(R.DE_CEL,
+                           NULL,
+                           NULL,
+                           DECODE(INSTR(R.DE_CEL, '-'),
+                                  0,
+                                  R.DE_CEL,
+                                  SUBSTR(R.DE_CEL, INSTR(R.DE_CEL, '-') + 2))),
+                    ' ')),
+           'SIN RESTRICCIÓN') AS RESTRICCION
