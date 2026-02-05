@@ -26,26 +26,81 @@ SELECT
     -- (13) Lugar de domicilio (descriptivo)
     TRIM(REPLACE(NVL(U_DOM.DE_UBIGEO_CAPTU, U_DOM.DE_UBIGEO), '/', ' / ')) AS LUGAR_DOMICILIO,
     -- (14) Domicilio - dirección (pref + dirección + número + block, interior, urb, etc.)
-    TRIM(
-        NVL(TRIM(A.DE_PREF_DIRECCION) || ' ', '') ||
-        NVL(TRIM(A.DE_DIRECCION) || ' ', '') ||
-        NVL(TRIM(A."NU_DIRECCION") || ' ', '') ||
-        NVL(TRIM(A.DE_BLOCK_CHALET) || ' ', '') ||
-        NVL(TRIM(A.DE_INTERIOR) || ' ', '') ||
-        NVL(TRIM(A.DE_URBANIZACION) || ' ', '') ||
-        NVL(TRIM(A.DE_ETAPA) || ' ', '') ||
-        NVL(TRIM(A.DE_MANZANA) || ' ', '') ||
-        NVL(TRIM(A.DE_LOTE_DIRECCION) || ' ', '') ||
-        NVL(TRIM(A.DE_PREF_BLOCK) || ' ', '') ||
-        NVL(TRIM(A.DE_PREF_INTERIOR) || ' ', '') ||
-        NVL(TRIM(A.DE_PREF_URB) || ' ', '')
-    ) AS DOMICILIO,
+   TRIM(REPLACE(REPLACE(REPLACE(DECODE(A.DE_PREF_DIRECCION,
+                                           NULL,
+                                           NULL,
+                                           (SELECT D.DE_DOM
+                                              FROM GETR_DOMINIOS D
+                                             WHERE D.NO_DOM =
+                                                   'DE_PREF_DIRECCION'
+                                               AND D.CO_DOMINIO =
+                                                   A.DE_PREF_DIRECCION
+                                               AND D.ES_DOM = '1')) || ' ' ||
+                                    A.DE_DIRECCION || ' ' || A.NU_DIRECCION || ' ' ||
+                                    DECODE(A.DE_PREF_BLOCK,
+                                           NULL,
+                                           NULL,
+                                           (SELECT D.DE_DOM
+                                              FROM GETR_DOMINIOS D
+                                             WHERE D.NO_DOM = 'DE_PREF_BLOCK'
+                                               AND D.CO_DOMINIO =
+                                                   A.DE_PREF_BLOCK
+                                               AND D.ES_DOM = '1')) || ' ' ||
+                                    A.DE_BLOCK_CHALET || ' ' ||
+                                    DECODE(A.DE_PREF_INTERIOR,
+                                           NULL,
+                                           NULL,
+                                           (SELECT D.DE_DOM
+                                              FROM GETR_DOMINIOS D
+                                             WHERE D.NO_DOM =
+                                                   'DE_PREF_INTERIOR'
+                                               AND D.CO_DOMINIO =
+                                                   A.DE_PREF_INTERIOR
+                                               AND D.ES_DOM = '1')) || ' ' ||
+                                    A.DE_INTERIOR || ' ' ||
+                                    DECODE(A.DE_PREF_URB,
+                                           NULL,
+                                           NULL,
+                                           (SELECT D.DE_DOM
+                                              FROM GETR_DOMINIOS D
+                                             WHERE D.NO_DOM = 'DE_PREF_URB'
+                                               AND D.CO_DOMINIO =
+                                                   A.DE_PREF_URB
+                                               AND D.ES_DOM = '1')) || ' ' ||
+                                    A.DE_URBANIZACION || ' ' ||
+                                    DECODE(A.DE_ETAPA,
+                                           NULL,
+                                           NULL,
+                                           'ETAPA ' || A.DE_ETAPA) || ' ' ||
+                                    DECODE(A.DE_MANZANA,
+                                           NULL,
+                                           NULL,
+                                           'MZ. ' || A.DE_MANZANA) || ' ' ||
+                                    DECODE(A.DE_LOTE_DIRECCION,
+                                           NULL,
+                                           NULL,
+                                           'LT. ' || A.DE_LOTE_DIRECCION),
+                                    '   ',
+                                    ' '),
+                            '  ',
+                            ' '),
+                    '  ',
+                    ' '))  AS DOMICILIO,
     -- (15) Grupo y factor sanguíneo
     G.DE_GRUPO_FACTOR AS GRUPO_FACTOR_SANGUINEO,
     -- (16) Observaciones (lista de observaciones del DNI)
     OBS.LISTA_OBSERVACIONES AS OBSERVACIONES,
     -- (17) Restricción
-    R.DE_RESTRI AS RESTRICCION,
+    --R.DE_RESTRI AS RESTRICCION,
+    NVL(TRIM(NVL(DECODE(R.DE_CEL,
+                           NULL,
+                           NULL,
+                           DECODE(INSTR(R.DE_CEL, '-'),
+                                  0,
+                                  R.DE_CEL,
+                                  SUBSTR(R.DE_CEL, INSTR(R.DE_CEL, '-') + 2))),
+                    ' ')),
+           'SIN RESTRICCIÓN') AS RESTRICCION,
     -- (18) Fecha de emisión DNIe
     A.FE_EMISION AS FECHA_EMISION_DNIE,
     -- (19) Fecha de caducidad DNIe (si año=3000 -> 'NO CADUCA')
@@ -66,16 +121,16 @@ FROM
         ON U_NACI.CO_DEPARTAMENTO = A.CO_DEPARTAMENTO_NACI
        AND U_NACI.CO_PROVINCIA    = A.CO_PROVINCIA_NACI
        AND U_NACI.CO_DISTRITO     = A.CO_DISTRITO_NACI
-       AND NVL(U_NACI.CO_PAIS, ' ') = NVL(A.CO_PAIS_NACI, ' ')
-       AND NVL(U_NACI.CO_CONTINENTE, ' ') = NVL(A.CO_CONTINENTE_NACI, ' ')
-       AND NVL(U_NACI.CO_CENTRO_POBLADO, ' ') = NVL(A.CO_CENTRO_POBLADO_NACI, ' ')
+       AND U_NACI.CO_PAIS = A.CO_PAIS_NACI
+       AND U_NACI.CO_CONTINENTE= A.CO_CONTINENTE_NACI
+       AND U_NACI.CO_CENTRO_POBLADO_O = A.CO_CENTRO_POBLADO_NACI
     LEFT JOIN IDOTABMAESTRA.GEVW_UBIGEOS U_DOM
         ON U_DOM.CO_DEPARTAMENTO = A.CO_DEPARTAMENTO_DOMICILIO
        AND U_DOM.CO_PROVINCIA    = A.CO_PROVINCIA_DOMICILIO
        AND U_DOM.CO_DISTRITO      = A.CO_DISTRITO_DOMICILIO
-       AND NVL(U_DOM.CO_PAIS, ' ') = NVL(A.CO_PAIS_DOMICILIO, ' ')
-       AND NVL(U_DOM.CO_CONTINENTE, ' ') = NVL(A.CO_CONTINENTE_DOMICILIO, ' ')
-       AND NVL(U_DOM.CO_CENTRO_POBLADO, ' ') = NVL(A.CO_CENTRO_POBLADO_DOMICILIO, ' ')
+       AND U_DOM.CO_PAIS = A.CO_PAIS_DOMICILIO
+       AND U_DOM.CO_CONTINENTE = A.CO_CONTINENTE_DOMICILIO
+       AND U_DOM.CO_CENTRO_POBLADO_O = A.CO_CENTRO_POBLADO_DOMICILIO
     LEFT JOIN IDOTABMAESTRA.GETR_ESTADO_CIVIL E
         ON E.CO_ESTADO_CIVIL = A.CO_ESTADO_CIVIL
     LEFT JOIN IDOTABMAESTRA.GETR_GRUPO_FACTOR_SANGUINEO G
@@ -100,7 +155,6 @@ FROM
         GROUP BY NU_DNI
     ) OBS ON OBS.NU_DNI = A.NU_DNI
     LEFT JOIN IMAGADM.IDTP_IMAGENES IMG
-        ON IMG.NU_FORMULARIO = A.NU_FICHA_REG AND IMG.TI_DOC_REG_FICHA = NVL(A.TI_FICHA_REG, A.TI_FICHA_IMAG)
+        ON IMG.NU_FORMULARIO = A.NU_IMAG AND IMG.TI_DOC_REG_FICHA = A.TI_FICHA_IMAG
     LEFT JOIN IMAGADM.IDTP_IMAGEN_MENOR IMGM
-        ON IMGM.NU_FORMULARIO = A.NU_FICHA_REG AND IMGM.TI_DOC_REG_FICHA = NVL(A.TI_FICHA_REG, A.TI_FICHA_IMAG)
-;
+        ON IMGM.NU_FORMULARIO = A.NU_IMAG AND IMGM.TI_DOC_REG_FICHA = A.TI_FICHA_IMAG;
