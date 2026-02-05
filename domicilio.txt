@@ -1,0 +1,60 @@
+TRIM(REPLACE(REPLACE(REPLACE(DECODE(A.DE_PREF_DIRECCION,
+                                           NULL,
+                                           NULL,
+                                           (SELECT D.DE_DOM
+                                              FROM GETR_DOMINIOS D
+                                             WHERE D.NO_DOM =
+                                                   'DE_PREF_DIRECCION'
+                                               AND D.CO_DOMINIO =
+                                                   A.DE_PREF_DIRECCION
+                                               AND D.ES_DOM = '1')) || ' ' ||
+                                    A.DE_DIRECCION || ' ' || A.NU_DIRECCION || ' ' ||
+                                    DECODE(A.DE_PREF_BLOCK,
+                                           NULL,
+                                           NULL,
+                                           (SELECT D.DE_DOM
+                                              FROM GETR_DOMINIOS D
+                                             WHERE D.NO_DOM = 'DE_PREF_BLOCK'
+                                               AND D.CO_DOMINIO =
+                                                   A.DE_PREF_BLOCK
+                                               AND D.ES_DOM = '1')) || ' ' ||
+                                    A.DE_BLOCK_CHALET || ' ' ||
+                                    DECODE(A.DE_PREF_INTERIOR,
+                                           NULL,
+                                           NULL,
+                                           (SELECT D.DE_DOM
+                                              FROM GETR_DOMINIOS D
+                                             WHERE D.NO_DOM =
+                                                   'DE_PREF_INTERIOR'
+                                               AND D.CO_DOMINIO =
+                                                   A.DE_PREF_INTERIOR
+                                               AND D.ES_DOM = '1')) || ' ' ||
+                                    A.DE_INTERIOR || ' ' ||
+                                    DECODE(A.DE_PREF_URB,
+                                           NULL,
+                                           NULL,
+                                           (SELECT D.DE_DOM
+                                              FROM GETR_DOMINIOS D
+                                             WHERE D.NO_DOM = 'DE_PREF_URB'
+                                               AND D.CO_DOMINIO =
+                                                   A.DE_PREF_URB
+                                               AND D.ES_DOM = '1')) || ' ' ||
+                                    A.DE_URBANIZACION || ' ' ||
+                                    DECODE(A.DE_ETAPA,
+                                           NULL,
+                                           NULL,
+                                           'ETAPA ' || A.DE_ETAPA) || ' ' ||
+                                    DECODE(A.DE_MANZANA,
+                                           NULL,
+                                           NULL,
+                                           'MZ. ' || A.DE_MANZANA) || ' ' ||
+                                    DECODE(A.DE_LOTE_DIRECCION,
+                                           NULL,
+                                           NULL,
+                                           'LT. ' || A.DE_LOTE_DIRECCION),
+                                    '   ',
+                                    ' '),
+                            '  ',
+                            ' '),
+                    '  ',
+                    ' ')) AS DE_DIRECCION_COMPLETA,
